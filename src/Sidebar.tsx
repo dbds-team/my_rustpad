@@ -13,7 +13,7 @@ import {
   Text,
   useToast,
 } from "@chakra-ui/react";
-import { VscRepo } from "react-icons/vsc";
+import { VscFiles, VscRepo } from "react-icons/vsc";
 
 import ConnectionStatus from "./ConnectionStatus";
 import User from "./User";
@@ -32,6 +32,7 @@ export type SidebarProps = {
   onLoadSample: () => void;
   onChangeName: (name: string) => void;
   onChangeColor: () => void;
+  onOpenDocBrowser: () => void;
 };
 
 function Sidebar({
@@ -46,6 +47,7 @@ function Sidebar({
   onLoadSample,
   onChangeName,
   onChangeColor,
+  onOpenDocBrowser,
 }: SidebarProps) {
   const toast = useToast();
 
@@ -166,12 +168,26 @@ function Sidebar({
       <Button
         size="sm"
         colorScheme={darkMode ? "whiteAlpha" : "blackAlpha"}
+        borderColor={darkMode ? "blue.400" : "blue.600"}
+        color={darkMode ? "blue.400" : "blue.600"}
+        variant="outline"
+        leftIcon={<VscFiles />}
+        mt={1}
+        onClick={onOpenDocBrowser}
+        width="100%"
+      >
+        My Documents
+      </Button>
+      <Button
+        size="sm"
+        colorScheme={darkMode ? "whiteAlpha" : "blackAlpha"}
         borderColor={darkMode ? "purple.400" : "purple.600"}
         color={darkMode ? "purple.400" : "purple.600"}
         variant="outline"
         leftIcon={<VscRepo />}
         mt={1}
         onClick={onLoadSample}
+        width="100%"
       >
         Read the code
       </Button>

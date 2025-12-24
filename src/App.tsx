@@ -6,6 +6,7 @@ import { VscChevronRight, VscFolderOpened, VscGist } from "react-icons/vsc";
 import useLocalStorageState from "use-local-storage-state";
 
 import rustpadRaw from "../rustpad-server/src/rustpad.rs?raw";
+import DocumentBrowser from "./DocumentBrowser";
 import Footer from "./Footer";
 import ReadCodeConfirm from "./ReadCodeConfirm";
 import Sidebar from "./Sidebar";
@@ -49,11 +50,13 @@ function App() {
   const id = useHash();
 
   const [readCodeConfirmOpen, setReadCodeConfirmOpen] = useState(false);
+  const [docBrowserOpen, setDocBrowserOpen] = useState(false);
 
   useEffect(() => {
     if (editor?.getModel()) {
       const model = editor.getModel()!;
-      model.setValue("");
+      const savedContent = localStorage.getItem(`doc_${id}`);
+      model.setValue(savedContent || "");
       model.setEOL(0); // LF
       rustpad.current = new Rustpad({
         uri: getWsUri(id),
@@ -76,7 +79,12 @@ function App() {
         },
         onChangeUsers: setUsers,
       });
+      const saveInterval = setInterval(() => {
+        localStorage.setItem(`doc_${id}`, model.getValue());
+      }, 2000);
       return () => {
+        localStorage.setItem(`doc_${id}`, model.getValue());
+        clearInterval(saveInterval);
         rustpad.current?.dispose();
         rustpad.current = undefined;
       };
@@ -168,6 +176,13 @@ function App() {
           onLoadSample={() => handleLoadSample(false)}
           onChangeName={(name) => name.length > 0 && setName(name)}
           onChangeColor={() => setHue(generateHue())}
+          onOpenDocBrowser={() => setDocBrowserOpen(true)}
+        />
+        <DocumentBrowser
+          isOpen={docBrowserOpen}
+          onClose={() => setDocBrowserOpen(false)}
+          onSelectDocument={(docId) => (window.location.hash = docId)}
+          currentDocId={id}
         />
         <ReadCodeConfirm
           isOpen={readCodeConfirmOpen}
