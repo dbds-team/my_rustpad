@@ -9,6 +9,7 @@ import rustpadRaw from "../rustpad-server/src/rustpad.rs?raw";
 import DocumentBrowser from "./DocumentBrowser";
 import Footer from "./Footer";
 import ReadCodeConfirm from "./ReadCodeConfirm";
+import SaveDialog from "./SaveDialog";
 import Sidebar from "./Sidebar";
 import animals from "./animals.json";
 import languages from "./languages.json";
@@ -51,6 +52,8 @@ function App() {
 
   const [readCodeConfirmOpen, setReadCodeConfirmOpen] = useState(false);
   const [docBrowserOpen, setDocBrowserOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [docName, setDocName] = useState(id);
 
   useEffect(() => {
     if (editor?.getModel()) {
@@ -96,6 +99,27 @@ function App() {
       rustpad.current?.setInfo({ name, hue });
     }
   }, [connection, name, hue]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        setDocName(id);
+        setSaveDialogOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [id]);
+
+  function handleSaveDocument(name: string) {
+    if (name && name !== id) {
+      const content = editor?.getModel()?.getValue() || "";
+      localStorage.setItem(`doc_${name}`, content);
+      window.location.hash = name;
+    }
+    setSaveDialogOpen(false);
+  }
 
   function handleLanguageChange(language: string) {
     setLanguage(language);
@@ -183,6 +207,12 @@ function App() {
           onClose={() => setDocBrowserOpen(false)}
           onSelectDocument={(docId) => (window.location.hash = docId)}
           currentDocId={id}
+        />
+        <SaveDialog
+          isOpen={saveDialogOpen}
+          onClose={() => setSaveDialogOpen(false)}
+          onSave={handleSaveDocument}
+          defaultName={docName}
         />
         <ReadCodeConfirm
           isOpen={readCodeConfirmOpen}
