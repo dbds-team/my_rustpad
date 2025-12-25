@@ -1,4 +1,4 @@
-import { Box, Flex, HStack, Icon, Text, useToast } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Icon, Text, useToast } from "@chakra-ui/react";
 import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import { useEffect, useRef, useState } from "react";
@@ -55,6 +55,8 @@ function App() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [docName, setDocName] = useState(id);
   const [hasSaved, setHasSaved] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [content, setContent] = useState("");
 
   useEffect(() => {
     if (editor?.getModel()) {
@@ -300,32 +302,64 @@ function App() {
             fontSize="13px"
             px={3.5}
             flexShrink={0}
+            justifyContent="space-between"
           >
-            <Icon as={VscFolderOpened} fontSize="md" color="blue.500" />
-            <Text>documents</Text>
-            <Icon as={VscChevronRight} fontSize="md" />
-            <Icon as={VscGist} fontSize="md" color="purple.500" />
-            <Text
-              cursor="pointer"
-              _hover={{ textDecoration: "underline" }}
-              onClick={() => {
-                setDocName(id);
-                setSaveDialogOpen(true);
-              }}
-            >
-              {id}
-            </Text>
+            <HStack spacing={1}>
+              <Icon as={VscFolderOpened} fontSize="md" color="blue.500" />
+              <Text>documents</Text>
+              <Icon as={VscChevronRight} fontSize="md" />
+              <Icon as={VscGist} fontSize="md" color="purple.500" />
+              <Text
+                cursor="pointer"
+                _hover={{ textDecoration: "underline" }}
+                onClick={() => {
+                  setDocName(id);
+                  setSaveDialogOpen(true);
+                }}
+              >
+                {id}
+              </Text>
+            </HStack>
+            {language === "markdown" && (
+              <Button
+                size="xs"
+                onClick={() => setShowPreview(!showPreview)}
+                colorScheme={showPreview ? "blue" : "gray"}
+              >
+                {showPreview ? "Edit" : "Preview"}
+              </Button>
+            )}
           </HStack>
           <Box flex={1} minH={0}>
-            <Editor
-              theme={darkMode ? "vs-dark" : "vs"}
-              language={language}
-              options={{
-                automaticLayout: true,
-                fontSize: 13,
-              }}
-              onMount={(editor) => setEditor(editor)}
-            />
+            {language === "markdown" && showPreview ? (
+              <Box
+                flex={1}
+                p={4}
+                overflow="auto"
+                bgColor={darkMode ? "#1e1e1e" : "white"}
+                dangerouslySetInnerHTML={{
+                  __html: content
+                    .replace(/!\[.*?\]\((data:image\/[^)]+)\)/g, '<img src="$1" style="max-width:100%"/>')
+                    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br/>')
+                }}
+              />
+            ) : (
+              <Editor
+                theme={darkMode ? "vs-dark" : "vs"}
+                language={language}
+                options={{
+                  automaticLayout: true,
+                  fontSize: 13,
+                }}
+                onMount={(editor) => setEditor(editor)}
+                onChange={(value) => setContent(value || "")}
+              />
+            )}
           </Box>
         </Flex>
       </Flex>
