@@ -54,6 +54,7 @@ function App() {
   const [docBrowserOpen, setDocBrowserOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [docName, setDocName] = useState(id);
+  const [hasSaved, setHasSaved] = useState(false);
 
   useEffect(() => {
     if (editor?.getModel()) {
@@ -101,9 +102,10 @@ function App() {
                 const base64 = event.target?.result as string;
                 const position = editor.getPosition();
                 if (position) {
+                  const text = language === "markdown" ? `![image](${base64})` : base64;
                   model.pushEditOperations(
                     editor.getSelections(),
-                    [{ range: { startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: position.lineNumber, endColumn: position.column }, text: `![image](${base64})` }],
+                    [{ range: { startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: position.lineNumber, endColumn: position.column }, text }],
                     () => null
                   );
                 }
@@ -114,12 +116,17 @@ function App() {
           }
         }
       };
-      window.addEventListener("paste", handlePaste);
+      const editorDom = editor.getDomNode();
+      if (editorDom) {
+        editorDom.addEventListener("paste", handlePaste as any);
+      }
 
       return () => {
         localStorage.setItem(`doc_${id}`, model.getValue());
         clearInterval(saveInterval);
-        window.removeEventListener("paste", handlePaste);
+        if (editorDom) {
+          editorDom.removeEventListener("paste", handlePaste as any);
+        }
         rustpad.current?.dispose();
         rustpad.current = undefined;
       };
@@ -136,13 +143,23 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        setDocName(id);
-        setSaveDialogOpen(true);
+        if (!hasSaved || id.length < 10) {
+          setDocName(id);
+          setSaveDialogOpen(true);
+        } else {
+          const content = editor?.getModel()?.getValue() || "";
+          localStorage.setItem(`doc_${id}`, content);
+          toast({
+            title: "Saved",
+            status: "success",
+            duration: 1000,
+          });
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [id]);
+  }, [id, hasSaved, editor, toast]);
 
   function handleSaveDocument(name: string) {
     if (name && name !== id) {
@@ -151,6 +168,7 @@ function App() {
       localStorage.setItem(`doc_${name}`, content);
       window.location.hash = name;
     }
+    setHasSaved(true);
     setSaveDialogOpen(false);
   }
 
@@ -270,7 +288,16 @@ function App() {
             <Text>documents</Text>
             <Icon as={VscChevronRight} fontSize="md" />
             <Icon as={VscGist} fontSize="md" color="purple.500" />
-            <Text>{id}</Text>
+            <Text
+              cursor="pointer"
+              _hover={{ textDecoration: "underline" }}
+              onClick={() => {
+                setDocName(id);
+                setSaveDialogOpen(true);
+              }}
+            >
+              {id}
+            </Text>
           </HStack>
           <Box flex={1} minH={0}>
             <Editor
