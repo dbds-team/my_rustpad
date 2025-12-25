@@ -143,11 +143,19 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
+        const content = editor?.getModel()?.getValue() || "";
+        if (!content.trim()) {
+          toast({
+            title: "Cannot save empty file",
+            status: "warning",
+            duration: 2000,
+          });
+          return;
+        }
         if (!hasSaved || id.length < 10) {
           setDocName(id);
           setSaveDialogOpen(true);
         } else {
-          const content = editor?.getModel()?.getValue() || "";
           localStorage.setItem(`doc_${id}`, content);
           toast({
             title: "Saved",
@@ -162,8 +170,17 @@ function App() {
   }, [id, hasSaved, editor, toast]);
 
   function handleSaveDocument(name: string) {
+    const content = editor?.getModel()?.getValue() || "";
+    if (!content.trim()) {
+      toast({
+        title: "Cannot save empty file",
+        status: "warning",
+        duration: 2000,
+      });
+      setSaveDialogOpen(false);
+      return;
+    }
     if (name && name !== id) {
-      const content = editor?.getModel()?.getValue() || "";
       localStorage.removeItem(`doc_${id}`);
       localStorage.setItem(`doc_${name}`, content);
       window.location.hash = name;
