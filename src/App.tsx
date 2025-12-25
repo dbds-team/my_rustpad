@@ -59,7 +59,9 @@ function App() {
     if (editor?.getModel()) {
       const model = editor.getModel()!;
       const savedContent = localStorage.getItem(`doc_${id}`);
-      model.setValue(savedContent || "");
+      if (savedContent !== null) {
+        model.setValue(savedContent);
+      }
       model.setEOL(0); // LF
       rustpad.current = new Rustpad({
         uri: getWsUri(id),
@@ -85,9 +87,39 @@ function App() {
       const saveInterval = setInterval(() => {
         localStorage.setItem(`doc_${id}`, model.getValue());
       }, 2000);
+
+      const handlePaste = (e: ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            e.preventDefault();
+            const blob = items[i].getAsFile();
+            if (blob) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const base64 = event.target?.result as string;
+                const position = editor.getPosition();
+                if (position) {
+                  model.pushEditOperations(
+                    editor.getSelections(),
+                    [{ range: { startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: position.lineNumber, endColumn: position.column }, text: `![image](${base64})` }],
+                    () => null
+                  );
+                }
+              };
+              reader.readAsDataURL(blob);
+            }
+            break;
+          }
+        }
+      };
+      window.addEventListener("paste", handlePaste);
+
       return () => {
         localStorage.setItem(`doc_${id}`, model.getValue());
         clearInterval(saveInterval);
+        window.removeEventListener("paste", handlePaste);
         rustpad.current?.dispose();
         rustpad.current = undefined;
       };
@@ -115,6 +147,7 @@ function App() {
   function handleSaveDocument(name: string) {
     if (name && name !== id) {
       const content = editor?.getModel()?.getValue() || "";
+      localStorage.removeItem(`doc_${id}`);
       localStorage.setItem(`doc_${name}`, content);
       window.location.hash = name;
     }
